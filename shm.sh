@@ -11,56 +11,60 @@ readonly SHM_DIR="${HOME}/.shm"
   # TODO: Path setup
 }
 
+println() {
+  printf "$1\n"
+}
+
 help() {
-  echo "shm"
-  echo "A simple package manager for simple shell scripts"
-  echo
-  echo "USAGE"
-  echo "\tshm [<command>] [<args>] [-h | --help]"
-  echo
-  echo "COMMANDS"
-  echo
-  echo "\tget\tFetches the script from github repository"
-  echo "\tls\tLists all installed scripts in SHM_DIR"
-  echo
-  echo
-  echo "OPTIONS"
-  echo "\t-h --help\t\t\tShow help"
-  echo
-  echo "For additional help use <command> -h"
+  println "shm"
+  println "A simple package manager for simple shell scripts"
+  println
+  println "USAGE"
+  println "\tshm [<command>] [<args>] [-h | --help]"
+  println
+  println "COMMANDS"
+  println
+  println "\tget\tFetches the script from github repository"
+  println "\tls\tLists all installed scripts in SHM_DIR"
+  println
+  println
+  println "OPTIONS"
+  println "\t-h --help\t\t\tShow help"
+  println
+  println "For additional help use <command> -h"
   exit 2
 }
 
 help_get() {
-  echo "shm get"
-  echo "Fetches the script from github repository when given <owner>/<repository> string as the argument."
-  echo
-  echo "USAGE"
-  echo "\tget <owner/repository>[@version] [-f | --file <filename>]\t"
-  echo
-  echo "OPTIONS"
-  echo "\t-f --file\t\t\tUse arbitrary filename instead of default repository name"
-  echo "\t-h --help\t\t\tShow help"
-  echo
+  println "shm get"
+  println "Fetches the script from github repository when given <owner>/<repository> string as the argument."
+  println
+  println "USAGE"
+  println "\tget <owner/repository>[@version] [-f | --file <filename>]\t"
+  println
+  println "OPTIONS"
+  println "\t-f --file\t\t\tUse arbitrary filename instead of default repository name"
+  println "\t-h --help\t\t\tShow help"
+  println
   exit 2
 }
 
 help_ls() {
-  echo "shm ls"
-  echo "Lists all installed scripts in SHM_DIR"
-  echo
-  echo "USAGE"
-  echo "\tls"
-  echo
-  echo "OPTIONS"
-  echo "\t-h --help\t\t\tShow help"
-  echo
+  println "shm ls"
+  println "Lists all installed scripts in SHM_DIR"
+  println
+  println "USAGE"
+  println "\tls"
+  println
+  println "OPTIONS"
+  println "\t-h --help\t\t\tShow help"
+  println
   exit 2
 }
 
 print() {
   if [ -z "${SILENT_FLAG}" ]; then
-    echo "$1"
+    printf "$1\n"
   fi
 }
 
@@ -71,21 +75,21 @@ err() {
 }
 
 get() {
-  args=()
   while [ $# -gt 0 ]; do
     case "$1" in
       -f|--filename)
-        FILENAME="$2"
+        readonly FILENAME="$2"
         shift
       ;;
       *)
-        args+="$1"
+        # there can only be one
+        readonly SCRIPT_REPO_LOCATION="$1"
       ;;
     esac
     shift
   done
 
-  readonly REPO_URL="github.com/${args[0]}"
+  readonly REPO_URL="github.com/${SCRIPT_REPO_LOCATION}"
   readonly GH_RAW_URL="https://raw.githubusercontent.com"
 
   [ -z "${REPO_URL##*@*}" ] && {
@@ -99,7 +103,6 @@ get() {
 
   readonly OWNER_REPO="${SANITIZED_URL#*/}"
   readonly SCRIPT_NAME="${OWNER_REPO#*/}"
-  #readonly SCRIPT_FILE="${SCRIPT_NAME}.sh"
   readonly SCRIPT_FILE="$([ -z "${FILENAME}" ] && echo "${SCRIPT_NAME}.sh" || echo "${FILENAME}")"
 
   readonly DOWNLOAD_SCRIPT_LOCATION="${GH_RAW_URL}/${OWNER_REPO}/${SCRIPT_VERSION:-HEAD}/${SCRIPT_FILE}"
@@ -108,13 +111,13 @@ get() {
 }
 
 download() {
-  local script_name="$1"
-  local version="$2"
-  local script_url="$3"
-  local tmp="/tmp/${script_name}"
-  local status_code=$(curl -sSL "${script_url}" -o "${tmp}" -w "%{http_code}")
+  readonly script_name="$1"
+  readonly version="$2"
+  readonly script_url="$3"
+  readonly tmp="/tmp/${script_name}"
+  readonly status_code=$(curl -sSL "${script_url}" -o "${tmp}" -w "%{http_code}")
 
-  if [ "$status_code" -gt 300 ]; then
+  if [ -z "${status_code}" ] || [ "${status_code}" -gt 300 ]; then
     print "shm: The requested URL returned error: ${status_code}"
     print "${script_url}"
     exit 1
@@ -131,30 +134,21 @@ download() {
   ln -sf "${script_dir}/${script_name}" "${SHM_DIR}/${script_name}${sym_ver}"
 }
 
-version() {
-  echo "$VERSION"
-  exit
-}
-
 ls() {
-  tmp=($(command find "${SHM_DIR}" -type l))
+  set -- $(command find "${SHM_DIR}" -type l)
 
-  for script in "${tmp[@]}"
+  for script;
   do
     echo "${script##*/}"
   done
 }
 
 shm() {
-  # When no arguments given then display help
+  # When no arguments given display help
   if [ $# -eq 0 ]; then
     help
   fi
 
-  local HELP_FLAG=0
-  local VERSION_FLAG=0
-
-  local args=()
   while [ $# -gt 0 ]; do
     case "$1" in
       get)
@@ -171,19 +165,16 @@ shm() {
           ls)
             help_ls
           ;;
-          ?)
+          *)
             help
           ;;
         esac
-      ;;
-      -v|--version)
-        version
       ;;
       -s|--silent)
         readonly SILENT_FLAG=1
       ;;
       *)
-        [ -z "${CMD}" ] && err "unknown option $1" || args+="$1"
+        [ -z "${CMD}" ] && err "unknown option $1" || readonly ARG="$1"
       ;;
     esac
     shift
@@ -194,7 +185,7 @@ shm() {
       ls
     ;;
     get)
-      get "$args"
+      get "$ARG"
     ;;
   esac
 }
