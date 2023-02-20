@@ -1,17 +1,32 @@
 # shm
-A simple package manager for simple shell scripts
+
+A simple script manager for shell scripts
 
 ## Installation
 
-Easiest way to install `shm` is with the below oneliner. You can also just
-download `shm.sh` and place it in `$HOME/.shm` directory.
+Easiest way to install `shm` is with one of the below oneliners. You can also
+just download `shm.sh` and place it in `$HOME/.shm` directory.
 
 ```sh
 curl -sSL https://raw.githubusercontent.com/erikjuhani/shm/main/shm.sh | sh
 ```
 
-By default the shm script assumes that `SHM_DIR` exists for it to perform it's regular actions otherwise it will try to install itself.
-For now shm needs be added to PATH manually, it is enough that `SHM_DIR` is added, which is `$HOME/.shm`.
+```sh
+wget -qO- https://raw.githubusercontent.com/erikjuhani/shm/main/shm.sh | sh
+```
+
+`shm` assumes that `SHM_DIR` exists for it to perform any regular actions,
+otherwise it `shm` will try to install itself and initialize `SHM_DIR`.
+
+### Path
+
+For now shm needs be added to PATH manually. `SHM_DIR` needs to be found in
+PATH, otherwise no `shm` installed scripts can be run directly from terminal.
+
+```fish
+# config.fish
+set -gx PATH $HOME/.shm $PATH
+```
 
 ## Usage
 
@@ -22,7 +37,7 @@ shm [<command>] [<args>] [-h | --help]
 ### Get
 
 To download and install shell scripts use `get` command. Get command fetches
-the script from github repository when given `<owner>/<repository>` string as
+the script from github repository, when given `<owner>/<repository>` string as
 the argument.
 
 ```sh
@@ -30,8 +45,8 @@ shm get erikjuhani/datef
 ```
 
 The script is then dowloaded to appropriate directory under `SHM_DIR`. The file
-is saved under following tree: `.shm/<scriptname>.d/<version>/<scriptname>`,
-then the script is symlinked to root of `.shm`
+is saved under following tree: `.shm/<scriptname>.d/<scriptname>[@<commit_sha>]`,
+then the script is symlinked to root of `.shm` folder.
 
 ### List
 
