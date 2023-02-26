@@ -4,15 +4,34 @@ set -e
 
 readonly SHM_DIR="${HOME}/.shm"
 
-# TODO: Move to shm install script
-# Create .shm directory under $HOME if it does not exist
-[ ! -d "${SHM_DIR}" ] && {
-  mkdir "${SHM_DIR}"
-  # TODO: Path setup
-}
+readonly BOLD_WHITE='\033[1;37m'
+readonly COLOR_RESET='\033[0m'
 
 print() {
   [ -z "${SILENT}" ] || [ "${SILENT}" -eq 0 ] && printf "%b\n" "$@"
+}
+
+set_shm_to_path() {
+  print "=> set ${SHM_DIR} to PATH in ${HOME}/.profile"
+  print "export PATH=\"${SHM_DIR}:\$PATH\"" >> "${HOME}/.profile"
+  print "   + set line export PATH=\"${SHM_DIR}:\$PATH\""
+  print
+  print "   ${BOLD_WHITE}To get started, run:"
+  print "   source ${HOME}/.profile${COLOR_RESET}"
+  print
+}
+
+setup() {
+  print "=> create ${SHM_DIR} directory"
+  mkdir "${SHM_DIR}"
+  print "   + shm directory created ${SHM_DIR}"
+
+  set_shm_to_path
+}
+
+[ ! -d "${SHM_DIR}" ] && {
+  print "=> run shm setup"
+  setup
 }
 
 help() {
@@ -156,7 +175,7 @@ get() {
   create_symlinks "${script_name}" "${commit_ref}"
 }
 
-function commit_ref() {
+commit_ref() {
   repo="$1"
 
   [ -z "${repo##*@*}" ] && commit_ref="${repo#*@}"
@@ -169,7 +188,7 @@ function commit_ref() {
   print "${commit_ref}"
 }
 
-function fetch_commit_patch() {
+fetch_commit_patch() {
   sanitized_url="$1"
   commit_ref="$2"
 
@@ -180,7 +199,7 @@ function fetch_commit_patch() {
   print "   + ${commit_sha}"
 }
 
-function fetch_script_file() {
+fetch_script_file() {
   script_name="$1"
   commit_ref="$2"
 

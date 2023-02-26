@@ -7,26 +7,24 @@ A simple script manager for shell scripts
 Easiest way to install `shm` is with one of the below oneliners. You can also
 just download `shm.sh` and place it in `$HOME/.shm` directory.
 
+curl:
+
 ```sh
 curl -sSL https://raw.githubusercontent.com/erikjuhani/shm/main/shm.sh | sh
 ```
+
+wget:
 
 ```sh
 wget -qO- https://raw.githubusercontent.com/erikjuhani/shm/main/shm.sh | sh
 ```
 
+The initial setup handles setting `SHM_DIR` to `$PATH`. `shm` uses `.profile`
+file. The instructions are printed for the user in the installation logs that
+are output to stdout.
+
 `shm` assumes that `SHM_DIR` exists for it to perform any regular actions,
 otherwise it `shm` will try to install itself and initialize `SHM_DIR`.
-
-### Path
-
-For now shm needs be added to PATH manually. `SHM_DIR` needs to be found in
-PATH, otherwise no `shm` installed scripts can be run directly from terminal.
-
-```fish
-# config.fish
-set -gx PATH $HOME/.shm $PATH
-```
 
 ## Usage
 
