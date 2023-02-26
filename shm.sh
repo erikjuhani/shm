@@ -35,53 +35,57 @@ setup() {
 }
 
 help() {
-  SILENT=0
-  print "shm"
-  print "A simple script manager for shell scripts"
-  print
-  print "USAGE"
-  print "\tshm [<command>] [<args>] [-h | --help]"
-  print
-  print "COMMANDS"
-  print
-  print "\tget\tFetches a script from github repository"
-  print "\tls\tLists all shm installed scripts"
-  print
-  print "OPTIONS"
-  print "\t-h --help\t\t\tShow help"
-  print
-  print "For additional help use <command> -h"
+  cat <<EOF
+shm
+A simple script manager for shell scripts
+
+USAGE
+
+	shm [<command>] [<args>] [-h | --help]
+
+COMMANDS
+	get	Fetches a script from github repository
+	ls	Lists all shm installed scripts
+
+OPTIONS
+	-h --help	Show help
+
+For additional help use <command> -h
+EOF
   exit 2
 }
 
 help_get() {
-  SILENT=0
-  print "shm get"
-  print "Fetches a script from github repository when given <owner>/<repository> as an argument."
-  print "If commit sha is given using @<commit_sha>, any arbitrary version of the script can be fetched."
-  print "Preferably you should use commit sha from a tag. By default HEAD is used."
-  print
-  print "USAGE"
-  print "\tget <owner/repository>[@commit_sha] [-f | --file <filename>]\t"
-  print
-  print "OPTIONS"
-  print "\t-f --file\t\t\tUse arbitrary filename instead of default repository name"
-  print "\t-h --help\t\t\tShow help"
-  print
+  cat <<EOF
+shm get
+Fetches a script from github repository when given <owner>/<repository> as an
+argument. If commit sha is given using @<commit_sha>, any arbitrary version of
+the script can be fetched. Preferably you should use commit sha from a tag. By
+default HEAD is used.
+
+USAGE
+	get <owner/repository>[@commit_sha] [-f | --file <filename>]
+
+OPTIONS
+	-f --file	Use arbitrary filename instead of default repository name
+	-h --help	Show help
+
+EOF
   exit 2
 }
 
 help_ls() {
-  SILENT=0
-  print "shm ls"
-  print "Lists all shm installed scripts"
-  print
-  print "USAGE"
-  print "\tls"
-  print
-  print "OPTIONS"
-  print "\t-h --help\t\t\tShow help"
-  print
+  cat <<EOF
+shm ls
+Lists all shm installed scripts
+
+USAGE
+	ls
+
+OPTIONS
+	-h --help	Show help
+
+EOF
   exit 2
 }
 
@@ -140,9 +144,12 @@ create_symlinks() {
 }
 
 get() {
-  while [ $# -gt 0 ]; do
+  [ "$#" -eq 0 ] && err "No arguments provided, use \`shm get <owner>/<repo>\`"
+
+  while [ "$#" -gt 0 ]; do
     case "$1" in
     -f | --filename)
+      [ -z "$2" ] && err "No value provided for flag, expected $1 <value>, got $1"
       filename="$2"
       shift
       ;;
@@ -234,12 +241,12 @@ shm() {
 
   for arg; do
     case "$arg" in
-    get) readonly CMD="get" ;;
-    ls) readonly CMD="ls" ;;
-    -s | --silent) SILENT=1 ;;
-    -h | --help) help ;;
+    get) readonly CMD="${arg}" ; shift ;;
+    ls) readonly CMD="${arg}" ; shift ;;
+    -s | --silent) SILENT=1 ; shift ;;
+    -h | --help) [ -z "${CMD}" ] && help ;;
     # Pass arguments to next command
-    *) shift ; break ;;
+    *) break ;;
     esac
   done
 
