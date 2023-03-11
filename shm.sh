@@ -135,6 +135,8 @@ create_symlinks() {
   print "=> creating symlink"
 
   if [ "$version" = "HEAD" ]; then
+    cp "${dir}/${filename}" "${dir}/${name}@${commit_sha}"
+
     ln -sf "${dir}/${filename}" "${SHM_DIR}/${name}"
     print "   + "${dir}/${filename}" -> ${SHM_DIR}/${name}"
   else
@@ -165,8 +167,8 @@ get() {
 
   [ -z "${repo}" ] && err "No get location provided, use \`shm get <owner>/<repo>\`"
 
-  repo="${repo%@*}"
-  readonly repo_url="github.com/${repo}"
+  sanitized_repo="${repo%@*}"
+  readonly repo_url="github.com/${sanitized_repo}"
 
   # Strip @... script version out of the url parameter
   sanitized_url="${repo_url%@*}"
@@ -177,7 +179,9 @@ get() {
 
   fetch_commit_patch "${sanitized_url}" "${commit_ref}"
 
-  fetch_script_file "${script_name}" "${commit_ref}"
+  check_script_exists "${script_name}@${commit_sha}"
+
+  fetch_script_file "${script_name}" "${commit_ref}" "${sanitized_repo}"
 
   create_symlinks "${script_name}" "${commit_ref}"
 }
@@ -195,6 +199,22 @@ commit_ref() {
   print "${commit_ref}"
 }
 
+check_script_exists() {
+  print "=> check $1"
+  compare_script_name="$1"
+  set -- $(command find "${SHM_DIR}" -type f)
+
+  for arg; do
+    _script_name="${arg##*/}"
+    [ "${_script_name}" == "${compare_script_name}" ] && {
+      print "   + ${compare_script_name} script already exists"
+      exit
+    }
+  done
+
+  print "   + ${compare_script_name} not found"
+}
+
 fetch_commit_patch() {
   sanitized_url="$1"
   commit_ref="$2"
@@ -209,10 +229,11 @@ fetch_commit_patch() {
 fetch_script_file() {
   script_name="$1"
   commit_ref="$2"
+  repo_name="$3"
 
   # strip out any file suffixes starting with dot like .sh
   readonly file="$([ -z "${filename}" ] && printf "%s" "${script_name%.*}.sh" || printf "%s" "${filename}")"
-  readonly file_url="${GH_RAW_URL}/${repo}/${commit_ref}/${file}"
+  readonly file_url="${GH_RAW_URL}/${repo_name}/${commit_ref}/${file}"
 
   filename="${script_name}@${commit_ref}"
   fetch "${file_url}" "/tmp/${filename}" "=> downloading ${filename}"
@@ -234,6 +255,8 @@ ls() {
   for script in $sorted_args; do
     print "${script##*/}"
   done
+
+  exit
 }
 
 shm() {
