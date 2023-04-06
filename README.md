@@ -46,6 +46,21 @@ The script is then dowloaded to appropriate directory under `SHM_DIR`. The file
 is saved under following tree: `.shm/<scriptname>.d/<scriptname>[@<commit_sha>]`,
 then the script is symlinked to root of `.shm` folder.
 
+#### Gists
+
+When given `-g | --gist` flag, get command fetches a `<gist>` with given
+`<gist_id>` instead of `<owner>/<repository>`.
+
+```sh
+shm get -g baa58da5c3dd1f69fae9
+=> fetching gist info
+   + found gist
+=> downloading jwtRS256.sh
+   + jwtRS256.sh
+=> creating symlink
+   + /Users/erik/.shm/jwtRS256.d/jwtRS256@HEAD -> /Users/erik/.shm/jwtRS256
+```
+
 ### List
 
 Lists all installed symlinked scripts in SHM_DIR.

@@ -63,11 +63,16 @@ argument. If commit sha is given using @<commit_sha>, any arbitrary version of
 the script can be fetched. Preferably you should use commit sha from a tag. By
 default HEAD is used.
 
+When given \`-g | --gist\` flag, get command fetches a <gist> with given
+<gist_id> instead of <owner>/<repository>.
+
 USAGE
-	get <owner/repository>[@commit_sha] [-f | --file <filename>]
+	get [-f | --file <filename>] <owner/repository>[@commit_sha]
+	get [-g | --gist <gist_id>]
 
 OPTIONS
 	-f --file	Use arbitrary filename instead of default repository name
+	-g --gist	Download a gist shell script with a given gist id
 	-h --help	Show help
 
 EOF
@@ -95,6 +100,7 @@ err() {
 }
 
 readonly GH_RAW_URL="https://raw.githubusercontent.com"
+readonly GH_GIST_API_URL="https://api.github.com/gists"
 
 fetch() {
   [ "$#" -lt 2 ] || [ "$#" -gt 3 ] && err "Expected 2-3 arguments, got $#"
@@ -145,6 +151,32 @@ create_symlinks() {
   fi
 }
 
+get_gist() {
+  [ "$#" -ne 1 ] && err "Expected 1 argument, got $#"
+
+  gist_id="$1"
+  gist_url="${GH_GIST_API_URL}/${gist_id}"
+
+  fetch "${gist_url}" "/tmp/gist_${gist_id}" "=> fetching gist info"
+  print "   + found gist"
+
+  raw_url="$(cat "/tmp/gist_${gist_id}" | grep raw_url | awk '{ print $2 }' | sed -e 's/,$//' -e 's/^"//' -e 's/"$//')"
+
+  filename="${raw_url##*/}"
+
+  file_suffix="${filename#*.}"
+
+  [ "${file_suffix}" != "sh" ] && err "Expected file suffix .sh, got .${file_suffix}"
+
+  script_name="${filename%*.sh}"
+
+  fetch "${raw_url}" "/tmp/${script_name}@HEAD" "=> downloading ${filename}"
+  print "   + ${filename}"
+
+  create_symlinks "${script_name}" "HEAD"
+  exit 0
+}
+
 get() {
   [ "$#" -eq 0 ] && err "No arguments provided, use \`shm get <owner>/<repo>\`"
 
@@ -155,6 +187,7 @@ get() {
       filename="$2"
       shift
       ;;
+    -g | --gist) get_gist "$2" ;;
     -h | --help) help_get ;;
     -*) err "Unknown option $1" ;;
     *)
@@ -256,7 +289,7 @@ ls() {
     print "${script##*/}"
   done
 
-  exit
+  exit 0
 }
 
 shm() {
