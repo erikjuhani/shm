@@ -12,12 +12,38 @@ print() {
 }
 
 set_shm_to_path() {
-  print "=> set ${SHM_DIR} to PATH in ${HOME}/.profile"
-  print "export PATH=\"${SHM_DIR}:\$PATH\"" >> "${HOME}/.profile"
-  print "   + set line export PATH=\"${SHM_DIR}:\$PATH\""
-  print
+  case $(basename "${SHELL}") in
+    fish)
+      config_path="${HOME}/.config/fish/config.fish"
+      set_path="set -x PATH ${SHM_DIR} \$PATH"
+      ;;
+    zsh)
+      config_path="${HOME}/.zshrc"
+      set_path="export PATH=\"${SHM_DIR}:\$PATH\""
+      ;;
+    bash)
+      config_path="${HOME}/.bashrc"
+      set_path="export PATH=\"${SHM_DIR}:\$PATH\""
+      ;;
+    *)
+      config_path="${HOME}/.profile"
+      set_path="export PATH=\"${SHM_DIR}:\$PATH\""
+      print "${0} is not directly supported. Should add shm manually to ${0} config"
+  esac
+
+  print "=> set ${SHM_DIR} to PATH in ${config_path}"
+
+  if grep -q "${SHM_DIR}" "${config_path}"; then
+    print "   + ${SHM_DIR} path configuration already exists in ${config_path}"
+    print
+  else
+    print "${set_path}" >> "${config_path}"
+    print "   + set line \"${set_path}\""
+    print
+  fi
+
   print "   ${BOLD_WHITE}To get started, run:"
-  print "   source ${HOME}/.profile${COLOR_RESET}"
+  print "   source ${config_path}${COLOR_RESET}"
   print
 }
 
