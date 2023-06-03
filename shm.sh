@@ -12,29 +12,30 @@ print() {
 }
 
 set_shm_to_path() {
+  dynamic_shm_dir="\$HOME/.shm"
   case $(basename "${SHELL}") in
     fish)
       config_path="${HOME}/.config/fish/config.fish"
-      set_path="set -x PATH ${SHM_DIR} \$PATH"
+      set_path="set -x PATH ${dynamic_shm_dir} \$PATH"
       ;;
     zsh)
       config_path="${HOME}/.zshrc"
-      set_path="export PATH=\"${SHM_DIR}:\$PATH\""
+      set_path="export PATH=\"${dynamic_shm_dir}:\$PATH\""
       ;;
     bash)
       config_path="${HOME}/.bashrc"
-      set_path="export PATH=\"${SHM_DIR}:\$PATH\""
+      set_path="export PATH=\"${dynamic_shm_dir}:\$PATH\""
       ;;
     *)
       config_path="${HOME}/.profile"
-      set_path="export PATH=\"${SHM_DIR}:\$PATH\""
+      set_path="export PATH=\"${dynamic_shm_dir}:\$PATH\""
       print "${0} is not directly supported. Should add shm manually to ${0} config"
   esac
 
-  print "=> set ${SHM_DIR} to PATH in ${config_path}"
+  print "=> set ${dynamic_shm_dir} to PATH in ${config_path}"
 
-  if grep -q "${SHM_DIR}" "${config_path}"; then
-    print "   + ${SHM_DIR} path configuration already exists in ${config_path}"
+  if grep -q "${dynamic_shm_dir}" "${config_path}"; then
+    print "   + ${dynamic_shm_dir} path configuration already exists in ${config_path}"
     print
   else
     print "${set_path}" >> "${config_path}"
