@@ -72,12 +72,13 @@ USAGE
 
 COMMANDS
 	get	Fetches a script from github repository
+	add	Add a script to shm from local path
 	ls	Lists all shm installed scripts
 
 OPTIONS
 	-h --help	Show help
 
-For additional help use <command> -h
+For additional help use shm <command> -h
 EOF
   exit 2
 }
@@ -124,6 +125,23 @@ EOF
 err() {
   printf >&2 "error: %s\n" "$@"
   exit 1
+}
+
+
+help_add() {
+  cat <<EOF
+shm add
+Adds a script to shm from local path
+
+USAGE
+	add [-f | --force] <filepath>
+
+OPTIONS
+	-f --force	Overwrites any existing script with the same name
+	-h --help	Show help
+
+EOF
+  exit 2
 }
 
 readonly GH_RAW_URL="https://raw.githubusercontent.com"
@@ -266,7 +284,7 @@ check_script_exists() {
 
   for arg; do
     _script_name="${arg##*/}"
-    [ "${_script_name}" == "${compare_script_name}" ] && {
+    [ "${_script_name}" = "${compare_script_name}" ] && {
       print "   + ${compare_script_name} script already exists"
       exit
     }
@@ -319,11 +337,48 @@ ls() {
   exit 0
 }
 
+add() {
+  [ "$#" -eq 0 ] && err "No arguments provided, use \`shm add <filepath>\`"
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+    -f | --force) readonly force_flag=1 ;;
+    -h | --help) help_add ;;
+    -*) err "Unknown option $1" ;;
+    *)
+      [ -n "$filepath" ] && err "Too many arguments, got \"${filepath} $*\", expected just one \"${filepath}\""
+      filepath="$1"
+      ;;
+    esac
+    shift
+  done
+
+  # Change relative path to absolute path
+  filepath="$(cd "$(dirname "${filepath}")" && pwd -P)/$(basename "${filepath}")"
+
+  # Remove extension from filename
+  filename="${filepath%.*}"
+
+  # Remove path delimeters from filename
+  filename="${filename##*/}"
+
+  if [ -n "${force_flag}" ] || check_script_exists "${filename}@HEAD"; then
+    print "=> copying file ${filepath}"
+    if cp "${filepath}" "/tmp/${filename}@HEAD" 2> /dev/null; then
+      create_symlinks "${filename}" "HEAD"
+      exit
+    fi
+
+    err "Could not find file \"${filepath}\""
+  fi
+}
+
 shm() {
   [ "$#" -eq 0 ] && help
 
   for arg; do
     case "$arg" in
+    add) readonly CMD="${arg}" ; shift ;;
     get) readonly CMD="${arg}" ; shift ;;
     ls) readonly CMD="${arg}" ; shift ;;
     -s | --silent) SILENT=1 ; shift ;;
@@ -335,6 +390,7 @@ shm() {
 
   case "${CMD}" in
   ls) ls "$@" ;;
+  add) add "$@" ;;
   get) get "$@" ;;
   *) err "Unknown command ${CMD}" ;;
   esac

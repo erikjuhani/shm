@@ -68,3 +68,24 @@ Lists all installed symlinked scripts in SHM_DIR.
 ```sh
 shm ls
 ```
+
+### Add
+
+Adds a script to shm from local path. All local scripts will be interpreted as
+HEAD, which means only one version is ever kept of the local script file.
+
+```sh
+shm.sh add local_script.sh
+=> copying file /Users/erik/local_script.sh
+=> creating symlink
+   + /Users/erik/.shm/local_script.d/local_script@HEAD -> /Users/erik/.shm/local_script
+```
+
+Any existing script can also be overwritten with the `-f` or `--force` flag.
+
+```sh
+shm.sh add -f local_script.sh
+=> copying file /Users/erik/local_script.sh
+=> creating symlink
+   + /Users/erik/.shm/local_script.d/local_script@HEAD -> /Users/erik/.shm/local_script
+```
