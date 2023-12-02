@@ -30,6 +30,7 @@ set_shm_to_path() {
       config_path="${HOME}/.profile"
       set_path="export PATH=\"${dynamic_shm_dir}:\$PATH\""
       print "${0} is not directly supported. Should add shm manually to ${0} config"
+      ;;
   esac
 
   print "=> set ${dynamic_shm_dir} to PATH in ${config_path}"
@@ -38,7 +39,7 @@ set_shm_to_path() {
     print "   + ${dynamic_shm_dir} path configuration already exists in ${config_path}"
     print
   else
-    print "${set_path}" >> "${config_path}"
+    print "${set_path}" >>"${config_path}"
     print "   + set line \"${set_path}\""
     print
   fi
@@ -71,7 +72,7 @@ USAGE
 	shm [<command>] [<args>] [-h | --help]
 
 COMMANDS
-	get	Fetches a script from github repository
+	get	Fetches a script, gist or binary from github repository
 	add	Add a script to shm from local path
 	ls	Lists all shm installed scripts
 
@@ -94,12 +95,19 @@ default HEAD is used.
 When given \`-g | --gist\` flag, get command fetches a <gist> with given
 <gist_id> instead of <owner>/<repository>.
 
+When given \`-b | --bin\` flag, get command fetches a binary file associated
+with the given repository. The binary file is fetched from github releases and
+matched with the users operating system and architecture. For example
+downloading the github cli: \`shm get --bin cli/cli\`.
+
 USAGE
-	get [-f | --file <filename>] <owner/repository>[@commit_sha]
+	get [-f | --file <filename>] <owner>/<repository>[@commit_sha]
+	get [-b | --bin] <owner>/<repository>
 	get [-g | --gist <gist_id>]
 
 OPTIONS
 	-f --file	Use arbitrary filename instead of default repository name
+	-g --bin	Download a binary file associated with the repository
 	-g --gist	Download a gist shell script with a given gist id
 	-h --help	Show help
 
@@ -127,7 +135,6 @@ err() {
   exit 1
 }
 
-
 help_add() {
   cat <<EOF
 shm add
@@ -145,7 +152,9 @@ EOF
 }
 
 readonly GH_RAW_URL="https://raw.githubusercontent.com"
-readonly GH_GIST_API_URL="https://api.github.com/gists"
+readonly GH_API_URL="https://api.github.com"
+readonly GH_GIST_API_URL="${GH_API_URL}/gists"
+readonly GH_REPOS_API_URL="${GH_API_URL}/repos"
 
 fetch() {
   [ "$#" -lt 2 ] || [ "$#" -gt 3 ] && err "Expected 2-3 arguments, got $#"
@@ -222,23 +231,84 @@ get_gist() {
   exit 0
 }
 
+get_bin() {
+  repo="$1"
+  release_assets="$(curl -s "${GH_REPOS_API_URL}/${repo}/releases/latest" | grep "browser_download_url.*")"
+
+  os="$(uname -s)"
+
+  case "${os}" in
+    Darwin)
+      os_release_assets="$(printf "%s" "${release_assets}" | grep -i -E "darwin|macos")"
+      download_url="$(printf "%s" "${os_release_assets}" | grep -i -E "($(uname -m)|x86_64).*(tar.gz|zip)\"")"
+      ;;
+    Linux)
+      os_release_assets="$(printf "%s" "${release_assets}" | grep -i "linux")"
+      download_url="$(printf "%s" "${os_release_assets}" | grep -i -E "($(uname -m)|x86_64).*(tar.gz|zip)\"")"
+      ;;
+    *) ;;
+  esac
+
+  sanitized_url="$(printf "%s" "${download_url}" | awk '{ print $2 }' | sed 's/"//g')"
+
+  # TODO: This needs to be fixed in some other way. The problems comes when
+  # there are multiple valid assets to download, and we only want one.
+  sanitized_url="$(printf "%s " $sanitized_url | sed 's/ .*//')"
+
+  tmp_asset_archive="$(mktemp)"
+
+  fetch "${sanitized_url}" "${tmp_asset_archive}" "=> downloading binary"
+  print "   + ${sanitized_url##*/}"
+
+  tmp_asset_dir="$(mktemp -d)"
+
+  print "=> unpacking archive"
+
+  # tar
+  if printf "%s" "${sanitized_url}" | grep "tar.gz" >/dev/null; then
+    tar -xf "${tmp_asset_archive}" -C "${tmp_asset_dir}"
+  else
+    # zip
+    unzip -qq "${tmp_asset_archive}" -d "${tmp_asset_dir}"
+  fi
+  print "   + unpacked ${sanitized_url##*/}"
+
+  # Look for the binary file
+  bin_path="$(find -L "${tmp_asset_dir}" -type f -perm -a=x)"
+  bin_name="${bin_path##*/}"
+
+  print "=> copying binary"
+
+  cp -f "${bin_path}" "${SHM_DIR}/${bin_name}"
+  print "   + ${bin_name} -> ${SHM_DIR}/${bin_name}"
+
+  exit 0
+}
+
 get() {
   [ "$#" -eq 0 ] && err "No arguments provided, use \`shm get <owner>/<repo>\`"
 
   while [ "$#" -gt 0 ]; do
     case "$1" in
-    -f | --filename)
-      [ -z "$2" ] && err "No value provided for flag, expected $1 <value>, got $1"
-      filename="$2"
-      shift
-      ;;
-    -g | --gist) get_gist "$2" ;;
-    -h | --help) help_get ;;
-    -*) err "Unknown option $1" ;;
-    *)
-      [ -n "$repo" ] && err "Too many arguments, got $(($# + 1)) expected 1"
-      repo="$1"
-      ;;
+      -f | --filename)
+        [ -z "$2" ] && err "No value provided for flag, expected $1 <value>, got $1"
+        filename="$2"
+        shift
+        ;;
+      -b | --bin)
+        [ -z "$2" ] && err "No value provided for flag, expected $1 <value>, got $1"
+        get_bin "$2"
+        ;;
+      -g | --gist)
+        [ -z "$2" ] && err "No value provided for flag, expected $1 <value>, got $1"
+        get_gist "$2"
+        ;;
+      -h | --help) help_get ;;
+      -*) err "Unknown option $1" ;;
+      *)
+        [ -n "$repo" ] && err "Too many arguments, got $(($# + 1)) expected 1"
+        repo="$1"
+        ;;
     esac
     shift
   done
@@ -271,7 +341,7 @@ commit_ref() {
   commit_ref="${commit_ref:-HEAD}"
 
   case "$commit_ref" in
-  *[0-9A-Fa-f]*) commit_ref="$(print "$commit_ref" | cut -c -7)" ;;
+    *[0-9A-Fa-f]*) commit_ref="$(print "$commit_ref" | cut -c -7)" ;;
   esac
 
   print "${commit_ref}"
@@ -321,8 +391,8 @@ fetch_script_file() {
 ls() {
   for arg; do
     case "$arg" in
-    -h | --help) help_ls ;;
-    *) break ;;
+      -h | --help) help_ls ;;
+      *) break ;;
     esac
   done
 
@@ -342,13 +412,13 @@ add() {
 
   while [ "$#" -gt 0 ]; do
     case "$1" in
-    -f | --force) readonly force_flag=1 ;;
-    -h | --help) help_add ;;
-    -*) err "Unknown option $1" ;;
-    *)
-      [ -n "$filepath" ] && err "Too many arguments, got \"${filepath} $*\", expected just one \"${filepath}\""
-      filepath="$1"
-      ;;
+      -f | --force) readonly force_flag=1 ;;
+      -h | --help) help_add ;;
+      -*) err "Unknown option $1" ;;
+      *)
+        [ -n "$filepath" ] && err "Too many arguments, got \"${filepath} $*\", expected just one \"${filepath}\""
+        filepath="$1"
+        ;;
     esac
     shift
   done
@@ -364,7 +434,7 @@ add() {
 
   if [ -n "${force_flag}" ] || check_script_exists "${filename}@HEAD"; then
     print "=> copying file ${filepath}"
-    if cp "${filepath}" "/tmp/${filename}@HEAD" 2> /dev/null; then
+    if cp "${filepath}" "/tmp/${filename}@HEAD" 2>/dev/null; then
       create_symlinks "${filename}" "HEAD"
       exit
     fi
@@ -378,21 +448,33 @@ shm() {
 
   for arg; do
     case "$arg" in
-    add) readonly CMD="${arg}" ; shift ;;
-    get) readonly CMD="${arg}" ; shift ;;
-    ls) readonly CMD="${arg}" ; shift ;;
-    -s | --silent) SILENT=1 ; shift ;;
-    -h | --help) [ -z "${CMD}" ] && help ;;
-    # Pass arguments to next command
-    *) break ;;
+      add)
+        readonly CMD="${arg}"
+        shift
+        ;;
+      get)
+        readonly CMD="${arg}"
+        shift
+        ;;
+      ls)
+        readonly CMD="${arg}"
+        shift
+        ;;
+      -s | --silent)
+        SILENT=1
+        shift
+        ;;
+      -h | --help) [ -z "${CMD}" ] && help ;;
+      # Pass arguments to next command
+      *) break ;;
     esac
   done
 
   case "${CMD}" in
-  ls) ls "$@" ;;
-  add) add "$@" ;;
-  get) get "$@" ;;
-  *) err "Unknown command ${CMD}" ;;
+    ls) ls "$@" ;;
+    add) add "$@" ;;
+    get) get "$@" ;;
+    *) err "Unknown command ${CMD}" ;;
   esac
 }
 
