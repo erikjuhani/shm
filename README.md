@@ -61,6 +61,22 @@ shm get -g baa58da5c3dd1f69fae9
    + /Users/erik/.shm/jwtRS256.d/jwtRS256@HEAD -> /Users/erik/.shm/jwtRS256
 ```
 
+#### Binaries
+
+When given `-b | --bin` flag, get command fetches a binary file associated with
+the given repository. The binary file is fetched from github releases and
+matched with the users operating system and architecture.
+
+```sh
+shm get --bin cli/cli
+=> downloading binary
+   + gh_2.39.2_macOS_arm64.zip
+=> unpacking archive
+   + unpacked gh_2.39.2_macOS_arm64.zip
+=> copying binary
+   + gh -> /Users/erik/.shm/gh
+```
+
 ### List
 
 Lists all installed symlinked scripts in SHM_DIR.
