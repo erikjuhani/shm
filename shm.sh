@@ -240,11 +240,11 @@ get_bin() {
   case "${os}" in
     Darwin)
       os_release_assets="$(printf "%s" "${release_assets}" | grep -i -E "darwin|macos")"
-      download_url="$(printf "%s" "${os_release_assets}" | grep -i -E "($(uname -m)|x86_64).*(tar.gz|zip)\"")"
+      download_url="$(printf "%s" "${os_release_assets}" | grep -i -E "($(uname -m)|x86_64).*(tar.xz|tar.gz|zip)\"")"
       ;;
     Linux)
       os_release_assets="$(printf "%s" "${release_assets}" | grep -i "linux")"
-      download_url="$(printf "%s" "${os_release_assets}" | grep -i -E "($(uname -m)|x86_64).*(tar.gz|zip)\"")"
+      download_url="$(printf "%s" "${os_release_assets}" | grep -i -E "($(uname -m)|x86_64).*(tar.xz|tar.gz|zip)\"")"
       ;;
     *) ;;
   esac
@@ -265,7 +265,7 @@ get_bin() {
   print "=> unpacking archive"
 
   # tar
-  if printf "%s" "${sanitized_url}" | grep "tar.gz" >/dev/null; then
+  if printf "%s" "${sanitized_url}" | grep -E "tar.(gz|xz)" >/dev/null; then
     tar -xf "${tmp_asset_archive}" -C "${tmp_asset_dir}"
   else
     # zip
