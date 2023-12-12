@@ -236,15 +236,24 @@ get_bin() {
   release_assets="$(curl -s "${GH_REPOS_API_URL}/${repo}/releases/latest" | grep "browser_download_url.*")"
 
   os="$(uname -s)"
+  arch="$(uname -m)"
+
+  if [ "${arch}" = "x86_64" ]; then
+    arch="${arch}|amd64"
+  fi
+
+  if [ "${arch}" = "arm64" ]; then
+    arch="${arch}|x86_64"
+  fi
 
   case "${os}" in
     Darwin)
       os_release_assets="$(printf "%s" "${release_assets}" | grep -i -E "darwin|macos")"
-      download_url="$(printf "%s" "${os_release_assets}" | grep -i -E "($(uname -m)|x86_64).*(tar.xz|tar.gz|zip)\"")"
+      download_url="$(printf "%s" "${os_release_assets}" | grep -i -E "(${arch}).*(tar.xz|tar.gz|zip)\"")"
       ;;
     Linux)
       os_release_assets="$(printf "%s" "${release_assets}" | grep -i "linux")"
-      download_url="$(printf "%s" "${os_release_assets}" | grep -i -E "($(uname -m)|x86_64).*(tar.xz|tar.gz|zip)\"")"
+      download_url="$(printf "%s" "${os_release_assets}" | grep -i -E "(${arch}).*(tar.xz|tar.gz|zip)\"")"
       ;;
     *) ;;
   esac
