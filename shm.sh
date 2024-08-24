@@ -75,6 +75,7 @@ COMMANDS
 	get	Fetches a script, gist or binary from github repository
 	add	Add a script to shm from local path
 	ls	Lists all shm installed scripts
+	rm	Removes installed script
 
 OPTIONS
 	-h --help	Show help
@@ -115,13 +116,28 @@ EOF
   exit 2
 }
 
-help_ls() {
+help_list() {
   cat <<EOF
 shm ls
 Lists all shm installed scripts
 
 USAGE
 	ls
+
+OPTIONS
+	-h --help	Show help
+
+EOF
+  exit 2
+}
+
+help_remove() {
+  cat <<EOF
+shm rm
+Remove installed script
+
+USAGE
+	rm <script_name>
 
 OPTIONS
 	-h --help	Show help
@@ -397,10 +413,10 @@ fetch_script_file() {
   print "   + ${file}"
 }
 
-ls() {
+list() {
   for arg; do
     case "$arg" in
-      -h | --help) help_ls ;;
+      -h | --help) help_list ;;
       *) break ;;
     esac
   done
@@ -414,6 +430,30 @@ ls() {
   done
 
   exit 0
+}
+
+remove() {
+  [ "$#" -eq 0 ] && help_remove
+  for arg; do
+    case "$arg" in
+      -h | --help) help_remove ;;
+      *) break ;;
+    esac
+  done
+  [ "$#" -gt 1 ] && err "Too many arguments, got \"$*\", expected just one \"$1\""
+  print "=> removing '$1'"
+  for script in $(list); do
+    if [ "${script}" = "$1" ]; then
+      script="$(which "$1")"
+      rm "${script}"
+      # For now remove all dangling versions too
+      rm -r "${script}.d"
+      print "   + removed '$1'"
+      exit 0
+    fi
+  done
+
+  err "No script found with name '$1'"
 }
 
 add() {
@@ -469,6 +509,10 @@ shm() {
         readonly CMD="${arg}"
         shift
         ;;
+      rm)
+        readonly CMD="${arg}"
+        shift
+        ;;
       -s | --silent)
         SILENT=1
         shift
@@ -480,7 +524,8 @@ shm() {
   done
 
   case "${CMD}" in
-    ls) ls "$@" ;;
+    ls) list "$@" ;;
+    rm) remove "$@" ;;
     add) add "$@" ;;
     get) get "$@" ;;
     *) err "Unknown command ${CMD}" ;;

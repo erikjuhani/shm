@@ -85,6 +85,14 @@ Lists all installed symlinked scripts in SHM_DIR.
 shm ls
 ```
 
+### Remove
+
+Remove installed symlinked script from SHM_DIR.
+
+```sh
+shm rm <script_name>
+```
+
 ### Add
 
 Adds a script to shm from local path. All local scripts will be interpreted as
